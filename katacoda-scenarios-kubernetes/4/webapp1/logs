@@ -1,0 +1,60 @@
+
+$ kubectl describe deployment webapp1
+Name:                   webapp1
+Namespace:              default
+CreationTimestamp:      Fri, 21 May 2021 17:47:51 +0000
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=webapp1
+Replicas:               1 desired | 1 updated | 1 total | 1 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=webapp1
+  Containers:
+   webapp1:
+    Image:        katacoda/docker-http-server:latest
+    Port:         80/TCP
+    Host Port:    0/TCP
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   webapp1-6b54fb89d9 (1/1 replicas created)
+Events:
+  Type    Reason             Age   From                   Message
+  ----    ------             ----  ----                   -------
+  Normal  ScalingReplicaSet  15s   deployment-controller  Scaled up replica set webapp1-6b54fb89d9 to 1
+
+
+
+**change to replicas:4**
+
+$ kubectl apply -f deployment.yaml
+Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply
+deployment.apps/webapp1 configured
+
+$ kubectl get deployment
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+webapp1   4/4     4            4           22m
+
+$ kubectl get pods
+NAME                       READY   STATUS    RESTARTS   AGE
+webapp1-6b54fb89d9-4n2t2   1/1     Running   0          23m
+webapp1-6b54fb89d9-nhsgz   1/1     Running   0          99s
+webapp1-6b54fb89d9-ppqwj   1/1     Running   0          99s
+webapp1-6b54fb89d9-z8hlm   1/1     Running   0          99s
+
+$ curl host01:30080
+<h1>This request was processed by host: webapp1-6b54fb89d9-z8hlm</h1>
+
+
+
+
+

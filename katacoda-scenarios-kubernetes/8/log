@@ -1,0 +1,167 @@
+controlplane $ kubectl apply -f deploy.yaml
+replicationcontroller/frontend created
+replicationcontroller/bad-frontend created
+service/frontend created
+controlplane $ cat deploy.yaml
+kind: List
+apiVersion: v1
+items:
+- kind: ReplicationController
+  apiVersion: v1
+  metadata:
+    name: frontend
+    labels:
+      name: frontend
+  spec:
+    replicas: 1
+    selector:
+      name: frontend
+    template:
+      metadata:
+        labels:
+          name: frontend
+      spec:
+        containers:
+        - name: frontend
+          image: katacoda/docker-http-server:health
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            timeoutSeconds: 1
+- kind: ReplicationController
+  apiVersion: v1
+  metadata:
+    name: bad-frontend
+    labels:
+      name: bad-frontend
+  spec:
+    replicas: 1
+    selector:
+      name: bad-frontend
+    template:
+      metadata:
+        labels:
+          name: bad-frontend
+      spec:
+        containers:
+        - name: bad-frontend
+          image: katacoda/docker-http-server:unhealthy
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 1
+            timeoutSeconds: 1
+- kind: Service
+  apiVersion: v1
+  metadata:
+    labels:
+      app: frontend
+      kubernetes.io/cluster-service: "true"
+    name: frontend
+  spec:
+    type: NodePort
+    ports:
+    - port: 80
+      nodePort: 30080
+    selector:
+      app: frontend
+controlplane $ kubectl get pods --selector="name=bad-frontend"
+NAME                 READY   STATUS    RESTARTS   AGE
+bad-frontend-zct67   0/1     Running   3          91s
+controlplane $ pod=$(kubectl get pods --selector="name=bad-frontend" --output=jsonpath={.items..metadata.name})
+controlplane $ kubectl describe pod $pod
+Name:               bad-frontend-zct67
+Namespace:          default
+Priority:           0
+PriorityClassName:  <none>
+Node:               controlplane/172.17.0.18
+Start Time:         Fri, 04 Jun 2021 04:16:46 +0000
+Labels:             name=bad-frontend
+Annotations:        <none>
+Status:             Running
+IP:                 10.32.0.5
+Controlled By:      ReplicationController/bad-frontend
+Containers:
+  bad-frontend:
+    Container ID:   docker://cec36b36fb436e3493ec42c5f49dfd568994c2373c9fcb09f6df1660b8031e19
+    Image:          katacoda/docker-http-server:unhealthy
+    Image ID:       docker-pullable://katacoda/docker-http-server@sha256:bea95c69c299c690103c39ebb3159c39c5061fee1dad13aa1b0625e0c6b52f22
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Fri, 04 Jun 2021 04:18:11 +0000
+    Last State:     Terminated
+      Reason:       Error
+      Exit Code:    2
+      Started:      Fri, 04 Jun 2021 04:17:41 +0000
+      Finished:     Fri, 04 Jun 2021 04:18:11 +0000
+    Ready:          False
+    Restart Count:  3
+    Liveness:       http-get http://:80/ delay=1s timeout=1s period=10s #success=1 #failure=3
+    Readiness:      http-get http://:80/ delay=1s timeout=1s period=10s #success=1 #failure=3
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-p4tsj (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             False 
+  ContainersReady   False 
+  PodScheduled      True 
+Volumes:
+  default-token-p4tsj:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-p4tsj
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type     Reason     Age                From                   Message
+  ----     ------     ----               ----                   -------
+  Normal   Scheduled  94s                default-scheduler      Successfully assigned default/bad-frontend-zct67 to controlplane
+  Normal   Pulling    93s                kubelet, controlplane  Pulling image "katacoda/docker-http-server:unhealthy"
+  Normal   Pulled     91s                kubelet, controlplane  Successfully pulled image "katacoda/docker-http-server:unhealthy"
+  Normal   Created    39s (x3 over 91s)  kubelet, controlplane  Created container bad-frontend
+  Normal   Started    39s (x3 over 91s)  kubelet, controlplane  Started container bad-frontend
+  Normal   Killing    39s (x2 over 69s)  kubelet, controlplane  Container bad-frontend failed liveness probe, will be restarted
+  Normal   Pulled     39s (x2 over 69s)  kubelet, controlplane  Container image "katacoda/docker-http-server:unhealthy" already present on machine
+  Warning  Unhealthy  33s (x6 over 83s)  kubelet, controlplane  Readiness probe failed: HTTP probe failed with statuscode: 500
+  Warning  Unhealthy  29s (x7 over 89s)  kubelet, controlplane  Liveness probe failed: HTTP probe failed with statuscode: 500
+controlplane $ kubectl get pods --selector="name=frontend"
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-rtmnk   1/1     Running   0          95s
+controlplane $ kubectl get pods --selector="name=frontend"
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-rtmnk   1/1     Running   0          11m
+controlplane $ pod=$(kubectl get pods --selector="name=frontend" --output=jsonpath={.items..metadata.name})
+controlplane $ kubectl exec $pod -- /usr/bin/curl -s localhost/unhealthy
+controlplane $ kubectl get pods --selector="name=frontend"
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-rtmnk   1/1     Running   0          11m
+controlplane $ pod=$(kubectl get pods --selector="name=frontend" --output=jsonpath={.items..metadata.name})
+controlplane $ kubectl exec $pod -- /usr/bin/curl -s localhost/unhealthy
+controlplane $ kubectl get pods --selector="name=frontend"
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-rtmnk   1/1     Running   1          13m
+controlplane $ pod=$(kubectl get pods --selector="name=frontend" --output=jsonpath={.items..metadata.name})
+controlplane $ kubectl exec $pod -- /usr/bin/curl -s localhost/unhealthy
+controlplane $ kubectl get pods --selector="name=frontend"
+NAME             READY   STATUS    RESTARTS   AGE
+frontend-rtmnk   0/1     Running   2          15m

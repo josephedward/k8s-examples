@@ -42,4 +42,4 @@ DevOps_Notes/Evernote/Pachyderm - Evernote.pdf
 */dist/*
 */node_modules/*
 */node_modules/pachyderm/node_modules/*
-*/client/dist/*
+*/client/dist/*.DS_Store
